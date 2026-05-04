@@ -30,7 +30,7 @@ function AssistantPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const response = await fetch('https://votebuddy.onrender.com/api/users', {
+      const response = await fetch('http://localhost:3001/api/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
