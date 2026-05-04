@@ -30,7 +30,7 @@ function AssistantPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/users', {
+      const response = await fetch('https://votebuddy.onrender.com/api/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -47,10 +47,10 @@ function AssistantPage() {
       }
 
       const data = await response.json();
-      
+
       const profile = { userId: data.userId, age: parseInt(age, 10), location, firstTime: firstTime === 'yes' };
       setUserProfile(profile);
-      
+
       // Determine initial message based on profile
       let initialMsg = '';
       if (profile.age < 18) {
@@ -83,7 +83,7 @@ function AssistantPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3001/api/assistant', {
+      const response = await fetch('https://votebuddy.onrender.com/api/assistant', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -100,7 +100,7 @@ function AssistantPage() {
       }
 
       const data = await response.json();
-      
+
       setCurrentStep(data.suggestedStep);
       setMessages(prev => [...prev, { role: 'model', content: data.response }]);
 
@@ -115,10 +115,10 @@ function AssistantPage() {
   return (
     <div className="flex-1 flex overflow-hidden bg-slate-50">
       <div className="max-w-7xl w-full mx-auto flex flex-col md:flex-row h-[calc(100vh-4rem)]">
-        
+
         {/* Left Side: Chat Interface */}
         <div className="flex-1 flex flex-col h-full bg-white md:border-r border-slate-200 shadow-sm relative">
-          
+
           {/* Header */}
           <div className="p-4 border-b border-slate-200 bg-white z-10">
             <h2 className="text-lg font-semibold text-slate-800">Your Personal Guide</h2>
@@ -139,13 +139,13 @@ function AssistantPage() {
                     <p className="text-sm text-slate-600">Tell me a bit about yourself.</p>
                   </div>
                 </div>
-                
+
                 <form onSubmit={handleProfileSubmit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Age</label>
-                    <input 
-                      type="number" 
-                      required 
+                    <input
+                      type="number"
+                      required
                       min="1"
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-shadow"
                       value={age}
@@ -155,9 +155,9 @@ function AssistantPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">State/Location</label>
-                    <input 
-                      type="text" 
-                      required 
+                    <input
+                      type="text"
+                      required
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-shadow"
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
@@ -177,8 +177,8 @@ function AssistantPage() {
                       </label>
                     </div>
                   </div>
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     className="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg shadow-sm transition-colors mt-2"
                   >
                     Start Guided Assistant
@@ -194,13 +194,12 @@ function AssistantPage() {
                     <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${msg.role === 'user' ? 'bg-slate-200 text-slate-600' : 'bg-brand-100 text-brand-600'}`}>
                       {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                     </div>
-                    
+
                     {/* Message Bubble */}
-                    <div className={`px-4 py-3 rounded-2xl ${
-                      msg.role === 'user' 
-                        ? 'bg-brand-600 text-white rounded-tr-sm' 
+                    <div className={`px-4 py-3 rounded-2xl ${msg.role === 'user'
+                        ? 'bg-brand-600 text-white rounded-tr-sm'
                         : 'bg-slate-100 text-slate-800 rounded-tl-sm'
-                    }`}>
+                      }`}>
                       {msg.role === 'user' ? (
                         <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
                       ) : (
@@ -211,7 +210,7 @@ function AssistantPage() {
                     </div>
                   </div>
                 ))}
-                
+
                 {isLoading && (
                   <div className="flex gap-3 max-w-[85%]">
                     <div className="shrink-0 w-8 h-8 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center">
@@ -253,7 +252,7 @@ function AssistantPage() {
         {/* Right Side: Steps Panel */}
         {userProfile && (
           <div className="w-full md:w-80 bg-slate-50 p-6 flex flex-col h-full border-t md:border-t-0 md:border-l border-slate-200 overflow-y-auto">
-             <StepsPanel currentStep={currentStep} userProfile={userProfile} />
+            <StepsPanel currentStep={currentStep} userProfile={userProfile} />
           </div>
         )}
 
