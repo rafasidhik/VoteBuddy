@@ -8,13 +8,9 @@ const db = require('../database');
 const router = express.Router();
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// POST /api/users - Create a new user session
+// POST /api/users - Create a new user session (age/location optional; collected via chat)
 router.post('/users', (req, res) => {
-  const { age, location, firstTime } = req.body;
-  
-  if (!age || !location) {
-    return res.status(400).json({ error: 'Age and location are required' });
-  }
+  const { age = 0, location = 'India', firstTime = true } = req.body;
 
   try {
     const stmt = db.prepare('INSERT INTO users (age, location, first_time) VALUES (?, ?, ?)');
@@ -48,24 +44,33 @@ router.post('/assistant', async (req, res) => {
     insertMsgStmt.run(userId, 'user', message);
 
     // 3. Construct Gemini Prompt
-    const systemInstruction = `You are an expert VoteBuddy assistant for a web app.
-    Your goal is to guide the user step-by-step through the voting process.
-    
-    User Profile:
-    - Age: ${user.age}
-    - Location: ${user.location}
-    - First Time Voter: ${user.first_time ? 'Yes' : 'No'}
-    
-    Current Step context: Step ${currentStep} of 4 (1: Eligibility, 2: Registration, 3: Documents, 4: Voting Day).
-    
-    Guidelines:
-    1. Keep responses concise, clear, and actionable. Avoid long paragraphs.
-    2. Format using markdown (bolding, simple bullet points).
-    3. Be encouraging and helpful.
-    4. Provide specific information based on their location if possible, otherwise give general US guidelines.
-    5. If they ask about polling booths, provide a mocked generic response if you don't know the exact location, mentioning "Based on your location, your polling booth is typically a local school or community center."
-    
-    Analyze the user's message and provide the next best step or answer their question.`;
+    const systemInstruction = `You are VoteBuddy, an expert assistant exclusively for **Indian voters**. 
+This platform is built solely for Indian citizens and covers Indian election processes governed by the Election Commission of India (ECI).
+
+IMPORTANT RULES:
+- Only provide information relevant to Indian elections, Indian voter registration, and Indian voting procedures.
+- If the user asks about elections or voting in any other country, politely clarify that VoteBuddy is exclusively for Indian voters and redirect them to Indian election topics.
+- Always refer to official Indian resources: voters.eci.gov.in, NVSP, Form 6, EPIC (Voter ID card), EVM (Electronic Voting Machine), Booth Level Officer (BLO), etc.
+
+COLLECTING USER INFO:
+- If the user hasn't shared their age and Indian state yet, ask for it naturally in your first response.
+- Once you know their age and state, provide personalized guidance for that Indian state.
+- If age < 18, explain they are not yet eligible but can pre-register at 17 years and 6 months using Form 6.
+- If they are a first-time voter, walk them through the full process step by step.
+
+USER PROFILE (from stored session):
+- Age: ${user.age > 0 ? user.age : 'Not provided yet — ask the user'}
+- State: ${user.location !== 'India' ? user.location : 'Not provided yet — ask the user'}
+- First Time Voter: ${user.first_time ? 'Yes' : 'No'}
+
+Current Step context: Step ${currentStep} of 4 (1: Eligibility, 2: Registration, 3: Documents, 4: Voting Day).
+
+RESPONSE GUIDELINES:
+1. Be concise, clear, and encouraging. Use short paragraphs and bullet points.
+2. Use markdown formatting (bold, bullets, numbered lists).
+3. Always cite the official ECI portal (https://voters.eci.gov.in/) when relevant.
+4. Provide state-specific details (e.g., state election commission links) when the user's state is known.
+5. Be warm and approachable — many users may be first-time voters who feel nervous.`;
 
     // Fetch history (optional: limit to last N messages for context window)
     const historyStmt = db.prepare('SELECT role, content FROM messages WHERE user_id = ? ORDER BY timestamp ASC');
@@ -115,7 +120,13 @@ router.post('/assistant', async (req, res) => {
 
   } catch (error) {
     console.error('Assistant error:', error);
-    res.status(500).json({ error: 'Failed to process request' });
+    if (error.status === 503 || (error.message && error.message.includes('high demand'))) {
+      res.status(503).json({ error: 'VoteBuddy AI is currently experiencing high demand. Please try again in a few minutes.' });
+    } else if (error.status === 429 || (error.message && error.message.includes('quota'))) {
+      res.status(429).json({ error: 'You are asking questions a bit too fast! Please wait 60 seconds and try again.' });
+    } else {
+      res.status(500).json({ error: 'Failed to process request', details: error.message });
+    }
   }
 });
 
