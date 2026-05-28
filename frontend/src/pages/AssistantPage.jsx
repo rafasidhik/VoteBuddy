@@ -24,7 +24,8 @@ function AssistantPage() {
   useEffect(() => {
     const initSession = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/users', {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        const response = await fetch(`${apiUrl}/api/users`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ age: 0, location: 'India', firstTime: true }),
@@ -64,7 +65,8 @@ function AssistantPage() {
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
-      const response = await fetch('http://localhost:3001/api/assistant', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/assistant`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
