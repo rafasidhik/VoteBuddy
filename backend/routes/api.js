@@ -33,15 +33,20 @@ router.post('/assistant', async (req, res) => {
   try {
     // 1. Get user profile
     const userStmt = db.prepare('SELECT * FROM users WHERE id = ?');
-    const user = userStmt.get(userId);
+    let user = userStmt.get(userId);
+    let currentUserId = userId;
     
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      // Create user on the fly if it doesn't exist (e.g. wiped ephemeral DB or local-ID fallback)
+      const stmt = db.prepare('INSERT INTO users (age, location, first_time) VALUES (?, ?, ?)');
+      const info = stmt.run(0, 'India', 1);
+      currentUserId = info.lastInsertRowid;
+      user = { age: 0, location: 'India', first_time: 1 };
     }
 
     // 2. Save user message
     const insertMsgStmt = db.prepare('INSERT INTO messages (user_id, role, content) VALUES (?, ?, ?)');
-    insertMsgStmt.run(userId, 'user', message);
+    insertMsgStmt.run(currentUserId, 'user', message);
 
     // 3. Construct Gemini Prompt
     const systemInstruction = `You are VoteBuddy, an expert assistant exclusively for **Indian voters**. 
@@ -74,7 +79,7 @@ RESPONSE GUIDELINES:
 
     // Fetch history (optional: limit to last N messages for context window)
     const historyStmt = db.prepare('SELECT role, content FROM messages WHERE user_id = ? ORDER BY timestamp ASC');
-    const dbHistory = historyStmt.all(userId);
+    const dbHistory = historyStmt.all(currentUserId);
     
     // Format history for Gemini
     const contents = dbHistory.map(msg => ({
@@ -98,7 +103,7 @@ RESPONSE GUIDELINES:
     const aiResponseText = response.text;
 
     // 5. Save AI response
-    insertMsgStmt.run(userId, 'model', aiResponseText);
+    insertMsgStmt.run(currentUserId, 'model', aiResponseText);
 
     // 6. Simple heuristic to determine next step based on keywords in response/message
     let nextStep = currentStep || 1;
@@ -115,7 +120,8 @@ RESPONSE GUIDELINES:
 
     res.json({
       response: aiResponseText,
-      suggestedStep: nextStep
+      suggestedStep: nextStep,
+      newUserId: currentUserId !== userId ? currentUserId : undefined
     });
 
   } catch (error) {

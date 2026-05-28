@@ -66,7 +66,7 @@ function AssistantPage() {
     setIsLoading(true);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -96,6 +96,10 @@ function AssistantPage() {
       // Try to extract profile info from the conversation
       if (data.extractedProfile) {
         setUserProfile(prev => ({ ...prev, ...data.extractedProfile }));
+      }
+      
+      if (data.newUserId) {
+        setUserProfile(prev => ({ ...prev, userId: data.newUserId }));
       }
 
       setMessages(prev => [...prev, { role: 'model', content: data.response }]);
