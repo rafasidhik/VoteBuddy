@@ -23,12 +23,15 @@ function AssistantPage() {
   // Auto-create a user session on mount
   useEffect(() => {
     const initSession = async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         const response = await fetch(`${apiUrl}/api/users`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ age: 0, location: 'India', firstTime: true }),
+          signal: controller.signal
         });
         if (response.ok) {
           const data = await response.json();
@@ -42,6 +45,7 @@ function AssistantPage() {
         // Network error — still open the chat with a temp ID
         setUserProfile({ userId: `local-${Date.now()}`, age: null, location: null, firstTime: null });
       } finally {
+        clearTimeout(timeoutId);
         setIsInitializing(false);
       }
     };
